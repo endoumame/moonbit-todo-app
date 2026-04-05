@@ -1,117 +1,70 @@
-// Todo item structure
+// Todo data model with automatic JSON serialization
 
 ///|
 struct Todo {
   id : Int
   title : String
   completed : Bool
-} derive(Show)
+} derive(ToJson, FromJson, Show)
 
-// Global mutable state for todos (in-memory storage)
-
-///|
-let todos : Array[Todo] = []
+// Application state — immutable sorted map wrapped in a Ref for controlled mutation
 
 ///|
-let next_id : Ref[Int] = { val: 1 }
-
-///|
-fn add_todo(title : String) -> Todo {
-  let todo : Todo = { id: next_id.val, title, completed: false }
-  next_id.val = next_id.val + 1
-  todos.push(todo)
-  todo
+struct Store {
+  todos : @sorted_map.SortedMap[Int, Todo]
+  next_id : Int
 }
 
 ///|
-fn get_all_todos() -> Array[Todo] {
-  todos
+let store : Ref[Store] = {
+  val: { todos: @sorted_map.SortedMap::new(), next_id: 1 },
 }
 
 ///|
-fn get_todo(id : Int) -> Todo? {
-  for todo in todos {
-    if todo.id == id {
-      return Some(todo)
+fn[T] with_store(f : (Store) -> (Store, T)) -> T {
+  let (new_store, result) = f(store.val)
+  store.val = new_store
+  result
+}
+
+///|
+fn[T] read_store(f : (Store) -> T) -> T {
+  f(store.val)
+}
+
+// Pure functions over Store
+
+///|
+fn Store::add(self : Store, title : String) -> (Store, Todo) {
+  let todo = { id: self.next_id, title, completed: false }
+  let new_store = {
+    todos: self.todos.add(todo.id, todo),
+    next_id: self.next_id + 1,
+  }
+  (new_store, todo)
+}
+
+///|
+fn Store::all(self : Store) -> Array[Todo] {
+  self.todos.iter().map(fn(pair) { pair.1 }).collect()
+}
+
+///|
+fn Store::update(self : Store, id : Int, f : (Todo) -> Todo) -> (Store, Todo?) {
+  match self.todos.get(id) {
+    None => (self, None)
+    Some(todo) => {
+      let updated = f(todo)
+      ({ ..self, todos: self.todos.add(id, updated) }, Some(updated))
     }
   }
-  None
 }
 
 ///|
-fn toggle_todo(id : Int) -> Todo? {
-  for i in 0..<todos.length() {
-    if todos[i].id == id {
-      let old = todos[i]
-      let updated : Todo = {
-        id: old.id,
-        title: old.title,
-        completed: !old.completed,
-      }
-      todos[i] = updated
-      return Some(updated)
-    }
+fn Store::remove(self : Store, id : Int) -> (Store, Bool) {
+  if self.todos.contains(id) {
+    ({ ..self, todos: self.todos.remove(id) }, true)
+  } else {
+    (self, false)
   }
-  None
-}
-
-///|
-fn update_todo_title(id : Int, title : String) -> Todo? {
-  for i in 0..<todos.length() {
-    if todos[i].id == id {
-      let old = todos[i]
-      let updated : Todo = { id: old.id, title, completed: old.completed }
-      todos[i] = updated
-      return Some(updated)
-    }
-  }
-  None
-}
-
-///|
-fn delete_todo(id : Int) -> Bool {
-  for i in 0..<todos.length() {
-    if todos[i].id == id {
-      todos.remove(i) |> ignore
-      return true
-    }
-  }
-  false
-}
-
-///|
-fn todo_to_json(todo : Todo) -> String {
-  let completed_str = if todo.completed { "true" } else { "false" }
-  let escaped_title = escape_json_string(todo.title)
-  "{\"id\":\{todo.id},\"title\":\"\{escaped_title}\",\"completed\":\{completed_str}}"
-}
-
-///|
-fn todos_to_json(arr : Array[Todo]) -> String {
-  let buf = StringBuilder::new()
-  buf.write_char('[')
-  for i, todo in arr {
-    if i > 0 {
-      buf.write_char(',')
-    }
-    buf.write_string(todo_to_json(todo))
-  }
-  buf.write_char(']')
-  buf.to_string()
-}
-
-///|
-fn escape_json_string(s : String) -> String {
-  let buf = StringBuilder::new()
-  for ch in s {
-    match ch {
-      '"' => buf.write_string("\\\"")
-      '\\' => buf.write_string("\\\\")
-      '\n' => buf.write_string("\\n")
-      '\r' => buf.write_string("\\r")
-      '\t' => buf.write_string("\\t")
-      _ => buf.write_char(ch)
-    }
-  }
-  buf.to_string()
 }
