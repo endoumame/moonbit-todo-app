@@ -1,0 +1,14 @@
+{
+  "is-main": true,
+  "import": [
+    "moonbitlang/core/string"
+  ],
+  "link": {
+    "js": {
+      "exports": [
+        "handle_request"
+      ],
+      "format": "esm"
+    }
+  }
+}
