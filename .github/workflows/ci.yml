@@ -13,10 +13,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache MoonBit toolchain
+        id: cache-moonbit
+        uses: actions/cache@v4
+        with:
+          path: ~/.moon
+          key: moonbit-${{ runner.os }}-${{ hashFiles('moon.mod.json') }}
+          restore-keys: moonbit-${{ runner.os }}-
+
       - name: Install MoonBit toolchain
+        if: steps.cache-moonbit.outputs.cache-hit != 'true'
         run: |
-          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
-          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash || {
+            echo "Official installer failed, falling back to manual install..."
+            mkdir -p ~/.moon/bin ~/.moon/lib
+            curl -fsSL -o /tmp/moonbit-wasm.tar.gz \
+              https://github.com/moonbitlang/moonbit-compiler/releases/latest/download/moonbit-wasm.tar.gz
+            tar -zxf /tmp/moonbit-wasm.tar.gz -C ~/.moon/bin
+            tar -zxf ~/.moon/bin/core.tar.gz -C ~/.moon/lib
+
+            # Create wrapper scripts for WASM-based tools
+            for tool in moonc moonfmt mooninfo; do
+              echo '#!/bin/bash' > ~/.moon/bin/$tool
+              echo "exec node ~/.moon/bin/${tool}.js \"\$@\"" >> ~/.moon/bin/$tool
+              chmod +x ~/.moon/bin/$tool
+            done
+
+            # Build moon build system from source
+            git clone --depth 1 https://github.com/moonbitlang/moon /tmp/moon-build
+            MOON_VERSION=$(cat ~/.moon/bin/moon_version)
+            cd /tmp/moon-build
+            git fetch origin "$MOON_VERSION" --depth 1 && git checkout "$MOON_VERSION" || true
+            cargo build --release
+            cp target/release/moon ~/.moon/bin/moon
+            cp target/release/moonrun ~/.moon/bin/moonrun 2>/dev/null || true
+            cd -
+
+            # Bundle core library
+            export PATH="$HOME/.moon/bin:$PATH"
+            cd ~/.moon/lib/core && moon bundle --target js
+          }
+
+      - name: Add MoonBit to PATH
+        run: echo "$HOME/.moon/bin" >> $GITHUB_PATH
 
       - name: Check MoonBit version
         run: |

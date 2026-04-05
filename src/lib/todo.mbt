@@ -1,4 +1,5 @@
 // Todo item structure
+
 ///|
 struct Todo {
   id : Int
