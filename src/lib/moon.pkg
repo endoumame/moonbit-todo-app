@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/core/string",
+}
+
+options(
+  "is-main": true,
+  link: { "js": { "exports": [ "handle_request" ], "format": "esm" } },
+)

@@ -1,4 +1,5 @@
 // Simple JSON body parser - extracts "title" field value
+///|
 fn parse_title_from_json(body : String) -> String? {
   let key = "\"title\""
   let mut key_idx = -1
@@ -55,6 +56,8 @@ fn parse_title_from_json(body : String) -> String? {
 }
 
 // Parse "completed" field from JSON body
+
+///|
 fn parse_completed_from_json(body : String) -> Bool? {
   let key = "\"completed\""
   let mut key_idx = -1
@@ -97,6 +100,8 @@ fn parse_completed_from_json(body : String) -> Bool? {
 }
 
 // Parse integer from a path segment like "/todos/123"
+
+///|
 fn parse_id_from_path(path : String) -> Int? {
   let prefix = "/todos/"
   if !path.has_prefix(prefix) {
@@ -115,31 +120,35 @@ fn parse_id_from_path(path : String) -> Int? {
   if num_str.length() == 0 {
     return None
   }
-  try {
-    Some(@string.parse_int(num_str))
-  } catch {
+  Some(@string.parse_int(num_str)) catch {
     _ => None
   }
 }
 
 // Response structure
+
+///|
 struct Response {
   status : Int
   body : String
   content_type : String
 }
 
+///|
 fn json_response(status : Int, body : String) -> Response {
   { status, body, content_type: "application/json" }
 }
 
+///|
 fn html_response(status : Int, body : String) -> Response {
   { status, body, content_type: "text/html; charset=utf-8" }
 }
 
 // HTML template for the UI
+
+///|
 fn render_html() -> String {
-  let html = (
+  let html =
     #|<!DOCTYPE html>
     #|<html lang="en">
     #|<head>
@@ -221,24 +230,30 @@ fn render_html() -> String {
     #|</script>
     #|</body>
     #|</html>
-  )
   html
 }
 
+///|
 fn main {
   // Entry point required by MoonBit for main packages
   // Actual logic is driven by handle_request called from JS
 }
 
+///|
 /// The main request handler exported to JavaScript
 /// Returns a JSON string: {"status": N, "body": "...", "content_type": "..."}
-pub fn handle_request(req_method : String, path : String, body : String) -> String {
+pub fn handle_request(
+  req_method : String,
+  path : String,
+  body : String,
+) -> String {
   let resp = route(req_method, path, body)
   let escaped_body = escape_json_string(resp.body)
   let escaped_ct = escape_json_string(resp.content_type)
   "{\"status\":\{resp.status},\"body\":\"\{escaped_body}\",\"content_type\":\"\{escaped_ct}\"}"
 }
 
+///|
 fn route(req_method : String, path : String, body : String) -> Response {
   // Serve HTML UI at root
   if path == "/" && req_method == "GET" {
@@ -262,7 +277,9 @@ fn route(req_method : String, path : String, body : String) -> Response {
     }
   }
   // PUT /todos/:id/toggle - toggle completion
-  if path.has_prefix("/todos/") && path.has_suffix("/toggle") && req_method == "PUT" {
+  if path.has_prefix("/todos/") &&
+    path.has_suffix("/toggle") &&
+    req_method == "PUT" {
     let without_toggle = path[:path.length() - "/toggle".length()].to_string()
     match parse_id_from_path(without_toggle) {
       Some(id) =>
@@ -280,20 +297,17 @@ fn route(req_method : String, path : String, body : String) -> Response {
         let title = parse_title_from_json(body)
         let completed = parse_completed_from_json(body)
         match title {
-          Some(t) => {
-            update_todo_title(id, t) |> ignore
-          }
+          Some(t) => update_todo_title(id, t) |> ignore
           None => ()
         }
         match completed {
-          Some(c) => {
+          Some(c) =>
             for i in 0..<todos.length() {
               if todos[i].id == id {
                 let old = todos[i]
                 todos[i] = { id: old.id, title: old.title, completed: c }
               }
             }
-          }
           None => ()
         }
         match get_todo(id) {

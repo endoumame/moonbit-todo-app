@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Build & Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Check MoonBit version
+        run: |
+          moon version
+          moonc -v
+
+      - name: Format check
+        run: moon fmt --check
+
+      - name: Type check
+        run: moon check --target js
+
+      - name: Build (JS release)
+        run: moon build --target js --release
+
+      - name: Test MoonBit module
+        run: |
+          node --input-type=module -e "
+            import { handle_request } from './_build/js/release/build/src/lib/lib.js';
+
+            function assert(cond, msg) { if (!cond) { console.error('FAIL:', msg); process.exit(1); } }
+
+            // Test GET /todos (empty)
+            let r = JSON.parse(handle_request('GET', '/todos', ''));
+            assert(r.status === 200, 'GET /todos status');
+            assert(r.body === '[]', 'GET /todos empty');
+
+            // Test POST /todos
+            r = JSON.parse(handle_request('POST', '/todos', '{\"title\":\"Test todo\"}'));
+            assert(r.status === 201, 'POST status');
+            let todo = JSON.parse(r.body);
+            assert(todo.id === 1, 'todo id');
+            assert(todo.title === 'Test todo', 'todo title');
+            assert(todo.completed === false, 'todo completed');
+
+            // Test GET /todos (with item)
+            r = JSON.parse(handle_request('GET', '/todos', ''));
+            let todos = JSON.parse(r.body);
+            assert(todos.length === 1, 'todos length');
+
+            // Test toggle
+            r = JSON.parse(handle_request('PUT', '/todos/1/toggle', ''));
+            todo = JSON.parse(r.body);
+            assert(todo.completed === true, 'toggle completed');
+
+            // Test DELETE
+            r = JSON.parse(handle_request('DELETE', '/todos/1', ''));
+            assert(r.status === 200, 'delete status');
+
+            // Verify empty after delete
+            r = JSON.parse(handle_request('GET', '/todos', ''));
+            todos = JSON.parse(r.body);
+            assert(todos.length === 0, 'empty after delete');
+
+            // Test 404
+            r = JSON.parse(handle_request('GET', '/nonexistent', ''));
+            assert(r.status === 404, '404 status');
+
+            // Test POST without title
+            r = JSON.parse(handle_request('POST', '/todos', '{}'));
+            assert(r.status === 400, 'missing title');
+
+            console.log('All tests passed!');
+          "
+
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MoonBit toolchain
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: Build
+        run: moon build --target js --release
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

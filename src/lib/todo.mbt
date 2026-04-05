@@ -1,4 +1,5 @@
 // Todo item structure
+///|
 struct Todo {
   id : Int
   title : String
@@ -6,10 +7,14 @@ struct Todo {
 } derive(Show)
 
 // Global mutable state for todos (in-memory storage)
+
+///|
 let todos : Array[Todo] = []
 
+///|
 let next_id : Ref[Int] = { val: 1 }
 
+///|
 fn add_todo(title : String) -> Todo {
   let todo : Todo = { id: next_id.val, title, completed: false }
   next_id.val = next_id.val + 1
@@ -17,10 +22,12 @@ fn add_todo(title : String) -> Todo {
   todo
 }
 
+///|
 fn get_all_todos() -> Array[Todo] {
   todos
 }
 
+///|
 fn get_todo(id : Int) -> Todo? {
   for todo in todos {
     if todo.id == id {
@@ -30,11 +37,16 @@ fn get_todo(id : Int) -> Todo? {
   None
 }
 
+///|
 fn toggle_todo(id : Int) -> Todo? {
   for i in 0..<todos.length() {
     if todos[i].id == id {
       let old = todos[i]
-      let updated : Todo = { id: old.id, title: old.title, completed: !old.completed }
+      let updated : Todo = {
+        id: old.id,
+        title: old.title,
+        completed: !old.completed,
+      }
       todos[i] = updated
       return Some(updated)
     }
@@ -42,6 +54,7 @@ fn toggle_todo(id : Int) -> Todo? {
   None
 }
 
+///|
 fn update_todo_title(id : Int, title : String) -> Todo? {
   for i in 0..<todos.length() {
     if todos[i].id == id {
@@ -54,6 +67,7 @@ fn update_todo_title(id : Int, title : String) -> Todo? {
   None
 }
 
+///|
 fn delete_todo(id : Int) -> Bool {
   for i in 0..<todos.length() {
     if todos[i].id == id {
@@ -64,12 +78,14 @@ fn delete_todo(id : Int) -> Bool {
   false
 }
 
+///|
 fn todo_to_json(todo : Todo) -> String {
   let completed_str = if todo.completed { "true" } else { "false" }
   let escaped_title = escape_json_string(todo.title)
   "{\"id\":\{todo.id},\"title\":\"\{escaped_title}\",\"completed\":\{completed_str}}"
 }
 
+///|
 fn todos_to_json(arr : Array[Todo]) -> String {
   let buf = StringBuilder::new()
   buf.write_char('[')
@@ -83,6 +99,7 @@ fn todos_to_json(arr : Array[Todo]) -> String {
   buf.to_string()
 }
 
+///|
 fn escape_json_string(s : String) -> String {
   let buf = StringBuilder::new()
   for ch in s {
