@@ -1,5 +1,3 @@
-// Test with a trivial in-process repository (no external deps)
-
 ///|
 priv struct TodoEntry {
   id : Int
@@ -60,9 +58,11 @@ impl TodoRepository for TestRepo with next_id(self) -> Int {
 ///|
 test "create and list" {
   let repo = TestRepo::new()
-  let todo = create(repo, "Buy milk") |> Result::unwrap
+  let (todo, events) = create(repo, "Buy milk") |> Result::unwrap
   assert_eq(todo.title().to_string(), "Buy milk")
   assert_eq(list(repo).length(), 1)
+  assert_eq(events.length(), 1)
+  assert_true(events[0] is TodoCreated(_))
 }
 
 ///|
@@ -75,9 +75,10 @@ test "create rejects empty title" {
 ///|
 test "toggle flips completed via service" {
   let repo = TestRepo::new()
-  let todo = create(repo, "task") |> Result::unwrap
-  let toggled = toggle(repo, todo.id()) |> Result::unwrap
+  let (todo, _) = create(repo, "task") |> Result::unwrap
+  let (toggled, events) = toggle(repo, todo.id()) |> Result::unwrap
   assert_eq(toggled.completed(), true)
+  assert_true(events[0] is TodoToggled(_))
 }
 
 ///|
@@ -89,24 +90,27 @@ test "toggle non-existent returns TodoNotFound" {
 ///|
 test "update title" {
   let repo = TestRepo::new()
-  let todo = create(repo, "old") |> Result::unwrap
-  let updated = update(repo, todo.id(), Some("new"), None) |> Result::unwrap
+  let (todo, _) = create(repo, "old") |> Result::unwrap
+  let (updated, events) = update(repo, todo.id(), Some("new"), None)
+    |> Result::unwrap
   assert_eq(updated.title().to_string(), "new")
+  assert_true(events[0] is TodoUpdated(_))
 }
 
 ///|
 test "update with empty title fails" {
   let repo = TestRepo::new()
-  let todo = create(repo, "ok") |> Result::unwrap
+  let (todo, _) = create(repo, "ok") |> Result::unwrap
   assert_true(update(repo, todo.id(), Some(""), None) is Err(EmptyTitle))
 }
 
 ///|
 test "delete removes todo" {
   let repo = TestRepo::new()
-  let todo = create(repo, "del") |> Result::unwrap
-  assert_true(delete(repo, todo.id()) is Ok(_))
+  let (todo, _) = create(repo, "del") |> Result::unwrap
+  let events = delete(repo, todo.id()) |> Result::unwrap
   assert_eq(list(repo).length(), 0)
+  assert_true(events[0] is TodoDeleted(_))
 }
 
 ///|

@@ -1,29 +1,3 @@
-// Always Valid Domain Model
-// priv fields prevent external packages from constructing invalid instances.
-// Smart constructors enforce invariants at the boundary.
-
-///|
-pub struct TodoTitle {
-  priv value : String
-}
-
-///|
-pub fn TodoTitle::create(raw : String) -> Result[TodoTitle, DomainError] {
-  let trimmed = raw.trim().to_string()
-  guard trimmed.length() > 0 else { return Err(EmptyTitle) }
-  Ok({ value: trimmed })
-}
-
-///|
-pub fn TodoTitle::to_string(self : TodoTitle) -> String {
-  self.value
-}
-
-///|
-pub impl ToJson for TodoTitle with to_json(self) -> Json {
-  Json::string(self.value)
-}
-
 ///|
 pub struct Todo {
   priv id_ : Int
@@ -64,6 +38,27 @@ pub fn Todo::with_title(self : Todo, title : TodoTitle) -> Todo {
 ///|
 pub fn Todo::with_completed(self : Todo, completed : Bool) -> Todo {
   { ..self, completed_: completed }
+}
+
+///|
+pub fn Todo::apply_update(
+  self : Todo,
+  raw_title : String?,
+  completed : Bool?,
+) -> Result[Todo, DomainError] {
+  let updated = match raw_title {
+    Some(t) =>
+      match TodoTitle::create(t) {
+        Err(e) => return Err(e)
+        Ok(title) => self.with_title(title)
+      }
+    None => self
+  }
+  let updated = match completed {
+    Some(c) => updated.with_completed(c)
+    None => updated
+  }
+  Ok(updated)
 }
 
 ///|

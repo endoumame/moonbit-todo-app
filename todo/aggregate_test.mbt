@@ -50,3 +50,28 @@ test "Todo::to_json produces correct structure" {
   assert_true(json_str.contains("\"title\":\"test\""))
   assert_true(json_str.contains("\"completed\":false"))
 }
+
+///|
+test "Todo::apply_update with title only" {
+  let title = TodoTitle::create("old") |> Result::unwrap
+  let todo = Todo::create(1, title)
+  let updated = todo.apply_update(Some("new"), None) |> Result::unwrap
+  assert_eq(updated.title().to_string(), "new")
+  assert_eq(updated.completed(), false)
+}
+
+///|
+test "Todo::apply_update with completed only" {
+  let title = TodoTitle::create("task") |> Result::unwrap
+  let todo = Todo::create(1, title)
+  let updated = todo.apply_update(None, Some(true)) |> Result::unwrap
+  assert_eq(updated.title().to_string(), "task")
+  assert_eq(updated.completed(), true)
+}
+
+///|
+test "Todo::apply_update rejects empty title" {
+  let title = TodoTitle::create("ok") |> Result::unwrap
+  let todo = Todo::create(1, title)
+  assert_true(todo.apply_update(Some(""), None) is Err(EmptyTitle))
+}

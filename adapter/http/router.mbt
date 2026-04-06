@@ -25,8 +25,6 @@ pub(all) struct HttpResponse {
   content_type : String
 }
 
-// Smart constructors as methods
-
 ///|
 fn HttpResponse::json(status : Int, body : String) -> HttpResponse {
   { status, body, content_type: "application/json" }
@@ -47,11 +45,12 @@ fn HttpResponse::error(status : Int, msg : String) -> HttpResponse {
 
 ///|
 fn HttpResponse::from_result(
-  result : Result[@todo.Todo, @todo.DomainError],
+  result : Result[(@todo.Todo, Array[@todo.DomainEvent]), @todo.DomainError],
   ok_status : Int,
 ) -> HttpResponse {
   match result {
-    Ok(todo) => HttpResponse::json(ok_status, todo.to_json().stringify())
+    Ok((todo, _events)) =>
+      HttpResponse::json(ok_status, todo.to_json().stringify())
     Err(e) => HttpResponse::from_domain_error(e)
   }
 }
@@ -112,18 +111,6 @@ fn parse_int_opt(s : String) -> Int? {
 // JSON body extraction
 
 ///|
-fn extract_title(body : String) -> String? {
-  match parse_json(body) {
-    Some(Object(map)) =>
-      match map.get("title") {
-        Some(Json::String(s)) => Some(s)
-        _ => None
-      }
-    _ => None
-  }
-}
-
-///|
 fn extract_fields(body : String) -> (String?, Bool?) {
   match parse_json(body) {
     Some(Object(map)) => {
@@ -162,11 +149,13 @@ pub fn[R : @todo.TodoRepository] handle(
     (Get, Root) => HttpResponse::html(render_html())
     (Get, Todos) =>
       HttpResponse::json(200, @todo.list(repo).to_json().stringify())
-    (Post, Todos) =>
-      match extract_title(body) {
+    (Post, Todos) => {
+      let (title, _) = extract_fields(body)
+      match title {
         Some(raw) => @todo.create(repo, raw) |> HttpResponse::from_result(201)
         None => HttpResponse::error(400, "title is required")
       }
+    }
     (Put, TodoToggle(id)) =>
       @todo.toggle(repo, id) |> HttpResponse::from_result(200)
     (Put, TodoItem(id)) => {
@@ -175,7 +164,7 @@ pub fn[R : @todo.TodoRepository] handle(
     }
     (Delete, TodoItem(id)) =>
       match @todo.delete(repo, id) {
-        Ok(_) => HttpResponse::json(200, "{\"deleted\":true}")
+        Ok(_events) => HttpResponse::json(200, "{\"deleted\":true}")
         Err(e) => HttpResponse::from_domain_error(e)
       }
     _ => HttpResponse::error(404, "not found")
