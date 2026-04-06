@@ -1,0 +1,52 @@
+///|
+test "TodoTitle::create rejects empty string" {
+  assert_true(TodoTitle::create("") is Err(EmptyTitle))
+}
+
+///|
+test "TodoTitle::create rejects whitespace-only" {
+  assert_true(TodoTitle::create("   ") is Err(EmptyTitle))
+}
+
+///|
+test "TodoTitle::create trims and accepts valid title" {
+  let title = TodoTitle::create("  Buy milk  ") |> Result::unwrap
+  assert_eq(title.to_string(), "Buy milk")
+}
+
+///|
+test "Todo::create sets completed to false" {
+  let title = TodoTitle::create("test") |> Result::unwrap
+  let todo = Todo::create(1, title)
+  assert_eq(todo.id(), 1)
+  assert_eq(todo.completed(), false)
+}
+
+///|
+test "Todo::toggle flips completed" {
+  let title = TodoTitle::create("test") |> Result::unwrap
+  let todo = Todo::create(1, title)
+  assert_eq(todo.toggle().completed(), true)
+  assert_eq(todo.toggle().toggle().completed(), false)
+}
+
+///|
+test "Todo::with_title preserves other fields" {
+  let title1 = TodoTitle::create("first") |> Result::unwrap
+  let title2 = TodoTitle::create("second") |> Result::unwrap
+  let todo = Todo::create(1, title1).toggle()
+  let updated = todo.with_title(title2)
+  assert_eq(updated.id(), 1)
+  assert_eq(updated.title().to_string(), "second")
+  assert_eq(updated.completed(), true)
+}
+
+///|
+test "Todo::to_json produces correct structure" {
+  let title = TodoTitle::create("test") |> Result::unwrap
+  let todo = Todo::create(42, title)
+  let json_str = todo.to_json().stringify()
+  assert_true(json_str.contains("\"id\":42"))
+  assert_true(json_str.contains("\"title\":\"test\""))
+  assert_true(json_str.contains("\"completed\":false"))
+}

@@ -1,5 +1,4 @@
-// Composition root — wires adapters to ports and exports the entry point.
-// This is the only place where concrete types meet.
+// Composition root — wires concrete adapters and exports entry point.
 
 ///|
 let repo : @store.InMemoryStore = @store.InMemoryStore::new()

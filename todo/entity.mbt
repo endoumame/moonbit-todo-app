@@ -1,6 +1,6 @@
 // Always Valid Domain Model
-// TodoTitle and Todo can only be constructed through validated smart constructors.
-// The priv fields prevent external packages from creating invalid instances.
+// priv fields prevent external packages from constructing invalid instances.
+// Smart constructors enforce invariants at the boundary.
 
 ///|
 pub struct TodoTitle {
@@ -10,11 +10,8 @@ pub struct TodoTitle {
 ///|
 pub fn TodoTitle::create(raw : String) -> Result[TodoTitle, DomainError] {
   let trimmed = raw.trim().to_string()
-  if trimmed.length() == 0 {
-    Err(EmptyTitle)
-  } else {
-    Ok({ value: trimmed })
-  }
+  guard trimmed.length() > 0 else { return Err(EmptyTitle) }
+  Ok({ value: trimmed })
 }
 
 ///|

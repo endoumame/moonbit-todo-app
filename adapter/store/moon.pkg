@@ -1,5 +1,4 @@
 import {
-  "endoumame/moonbit-todo-app/domain" @domain,
-  "endoumame/moonbit-todo-app/port" @port,
+  "endoumame/moonbit-todo-app/todo" @todo,
   "moonbitlang/core/immut/sorted_map" @sorted_map,
 }
