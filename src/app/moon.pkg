@@ -1,6 +1,6 @@
 import {
-  "endoumame/moonbit-todo-app/adapter/store" @store,
-  "endoumame/moonbit-todo-app/adapter/http" @http,
+  "endoumame/moonbit-todo-app/src/adapter/store" @store,
+  "endoumame/moonbit-todo-app/src/adapter/http" @http,
   "moonbitlang/core/json",
 }
 

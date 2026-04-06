@@ -1,5 +1,5 @@
 import {
-  "endoumame/moonbit-todo-app/todo" @todo,
+  "endoumame/moonbit-todo-app/src/todo" @todo,
   "moonbitlang/core/json",
   "moonbitlang/core/string",
 }
