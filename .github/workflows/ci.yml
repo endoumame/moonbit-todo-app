@@ -76,10 +76,13 @@ jobs:
       - name: Type check
         run: moon check --target js
 
+      - name: Unit tests
+        run: moon test --target js
+
       - name: Build (JS release)
         run: moon build --target js --release
 
-      - name: Test MoonBit module
+      - name: Integration test
         run: |
           node --input-type=module -e "
             import { handle_request } from './_build/js/release/build/app/app.js';
