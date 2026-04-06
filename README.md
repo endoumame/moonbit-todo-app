@@ -1,70 +1,61 @@
 # MoonBit Todo App on Cloudflare Workers
 
-A Todo application built with [MoonBit](https://www.moonbitlang.com/) using Hexagonal Architecture and Always Valid Domain Model, deployed on [Cloudflare Workers](https://workers.cloudflare.com/).
+A Todo application built with [MoonBit](https://www.moonbitlang.com/), deployed on [Cloudflare Workers](https://workers.cloudflare.com/).
+
+Domain-concept packaging (DDD Module Pattern) + Always Valid Domain Model + Hexagonal Architecture.
 
 ## Architecture
 
 ```
-          ┌─────────────────────────────────────────┐
-          │              Driving Adapter             │
-          │         adapter/http/ (HTTP router)      │
-          └──────────────┬──────────────────────────┘
-                         │
-          ┌──────────────▼──────────────────────────┐
-          │            Use Cases                     │
-          │     usecase/ (application services)      │
-          └──────┬──────────────────┬───────────────┘
-                 │                  │
-  ┌──────────────▼────────┐  ┌─────▼──────────────┐
-  │       Domain          │  │      Port           │
-  │  domain/ (entities,   │  │  port/ (repository  │
-  │  value objects)       │  │  trait)              │
-  └───────────────────────┘  └─────┬──────────────┘
-                                   │
-          ┌────────────────────────▼────────────────┐
-          │             Driven Adapter               │
-          │    adapter/store/ (InMemoryStore)         │
-          └──────────────────────────────────────────┘
+  ┌──────────────────────────────┐
+  │       Driving Adapter        │
+  │  adapter/http/ (HTTP router) │
+  └────────────┬─────────────────┘
+               │ calls
+  ┌────────────▼─────────────────┐
+  │         todo/                │
+  │  Entity, Value Objects,      │
+  │  Repository Trait, Services  │
+  └────────────┬─────────────────┘
+               │ implemented by
+  ┌────────────▼─────────────────┐
+  │       Driven Adapter         │
+  │  adapter/store/ (InMemory)   │
+  └──────────────────────────────┘
 ```
 
-**Dependencies point inward** — adapters depend on domain/ports, never the reverse.
+Adapters depend on `todo/`, never the reverse.
 
 ## Project Structure
 
 ```
 moonbit-todo-app/
-├── domain/                  # Core domain (no infrastructure dependencies)
-│   ├── moon.pkg
-│   ├── todo.mbt             # Todo, TodoTitle (always valid via smart constructors)
-│   └── error.mbt            # DomainError enum
-├── port/                    # Port definitions (traits/interfaces)
-│   ├── moon.pkg
-│   └── repository.mbt       # TodoRepository trait
-├── usecase/                 # Application services (orchestrate domain logic)
-│   ├── moon.pkg
-│   └── todo_usecase.mbt     # create, list, toggle, update, delete
+├── todo/                        # Domain concept (DDD module)
+│   ├── entity.mbt              # Todo, TodoTitle (always valid)
+│   ├── error.mbt               # DomainError
+│   ├── repository.mbt          # TodoRepository trait
+│   ├── service.mbt             # create, list, toggle, update, delete
+│   ├── entity_test.mbt         # Value object / entity tests
+│   └── service_test.mbt        # Service tests with TestRepo
 ├── adapter/
-│   ├── store/               # Driven adapter (infrastructure)
-│   │   ├── moon.pkg
-│   │   └── memory.mbt       # InMemoryStore implements TodoRepository
-│   └── http/                # Driving adapter (HTTP interface)
-│       ├── moon.pkg
-│       ├── router.mbt       # HTTP routing, JSON conversion
-│       └── html.mbt         # HTML/CSS/JS frontend template
-├── app/                     # Composition root
-│   ├── moon.pkg
-│   └── main.mbt             # Wires adapters, exports handle_request
+│   ├── store/
+│   │   └── memory.mbt          # InMemoryStore implements TodoRepository
+│   └── http/
+│       ├── router.mbt          # HTTP routing, JSON ↔ domain translation
+│       └── html.mbt            # HTML/CSS/JS frontend
+├── app/
+│   └── main.mbt                # Composition root, exports handle_request
 ├── worker/
-│   └── index.js             # Cloudflare Workers entry point
+│   └── index.js                # Cloudflare Workers entry point
 ├── wrangler.toml
 └── moon.mod.json
 ```
 
 ## Always Valid Domain Model
 
-- `TodoTitle` — opaque type with `priv` field; can only be created via `TodoTitle::create()` which validates non-empty/non-blank
-- `Todo` — all fields are `priv`; constructed only via `Todo::create()`, modified via `toggle()`, `with_title()`, `with_completed()`
-- Invalid states are unrepresentable at compile time
+- **`TodoTitle`** — `priv` field, smart constructor `TodoTitle::create()` rejects empty/whitespace-only
+- **`Todo`** — all fields `priv`, constructed via `Todo::create()`, immutable updates via `toggle()`, `with_title()`, `with_completed()`
+- Invalid states are unrepresentable
 
 ## Prerequisites
 
@@ -75,8 +66,17 @@ moonbit-todo-app/
 ## Development
 
 ```bash
+# Build
 moon build --target js --release
+
+# Test (15 unit tests)
+moon test --target js
+
+# Run locally
 wrangler dev
+
+# Deploy
+wrangler deploy
 ```
 
 ## API
