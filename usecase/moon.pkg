@@ -1,0 +1,4 @@
+import {
+  "endoumame/moonbit-todo-app/domain" @domain,
+  "endoumame/moonbit-todo-app/port" @port,
+}

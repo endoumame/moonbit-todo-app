@@ -1,0 +1,3 @@
+import {
+  "endoumame/moonbit-todo-app/domain" @domain,
+}

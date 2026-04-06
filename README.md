@@ -1,51 +1,91 @@
 # MoonBit Todo App on Cloudflare Workers
 
-A simple Todo application built with [MoonBit](https://www.moonbitlang.com/) and deployed on [Cloudflare Workers](https://workers.cloudflare.com/).
+A Todo application built with [MoonBit](https://www.moonbitlang.com/) using Hexagonal Architecture and Always Valid Domain Model, deployed on [Cloudflare Workers](https://workers.cloudflare.com/).
 
-MoonBit code is compiled to JavaScript via `moon build --target js` and served through a Cloudflare Workers entry point.
+## Architecture
+
+```
+          ┌─────────────────────────────────────────┐
+          │              Driving Adapter             │
+          │         adapter/http/ (HTTP router)      │
+          └──────────────┬──────────────────────────┘
+                         │
+          ┌──────────────▼──────────────────────────┐
+          │            Use Cases                     │
+          │     usecase/ (application services)      │
+          └──────┬──────────────────┬───────────────┘
+                 │                  │
+  ┌──────────────▼────────┐  ┌─────▼──────────────┐
+  │       Domain          │  │      Port           │
+  │  domain/ (entities,   │  │  port/ (repository  │
+  │  value objects)       │  │  trait)              │
+  └───────────────────────┘  └─────┬──────────────┘
+                                   │
+          ┌────────────────────────▼────────────────┐
+          │             Driven Adapter               │
+          │    adapter/store/ (InMemoryStore)         │
+          └──────────────────────────────────────────┘
+```
+
+**Dependencies point inward** — adapters depend on domain/ports, never the reverse.
 
 ## Project Structure
 
 ```
 moonbit-todo-app/
-├── moon.mod.json              # MoonBit module configuration
-├── src/
-│   └── lib/
-│       ├── moon.pkg.json      # Package config (exports, JS format)
-│       ├── todo.mbt           # Todo data model and CRUD operations
-│       └── handler.mbt        # HTTP routing and HTML UI
+├── domain/                  # Core domain (no infrastructure dependencies)
+│   ├── moon.pkg
+│   ├── todo.mbt             # Todo, TodoTitle (always valid via smart constructors)
+│   └── error.mbt            # DomainError enum
+├── port/                    # Port definitions (traits/interfaces)
+│   ├── moon.pkg
+│   └── repository.mbt       # TodoRepository trait
+├── usecase/                 # Application services (orchestrate domain logic)
+│   ├── moon.pkg
+│   └── todo_usecase.mbt     # create, list, toggle, update, delete
+├── adapter/
+│   ├── store/               # Driven adapter (infrastructure)
+│   │   ├── moon.pkg
+│   │   └── memory.mbt       # InMemoryStore implements TodoRepository
+│   └── http/                # Driving adapter (HTTP interface)
+│       ├── moon.pkg
+│       ├── router.mbt       # HTTP routing, JSON conversion
+│       └── html.mbt         # HTML/CSS/JS frontend template
+├── app/                     # Composition root
+│   ├── moon.pkg
+│   └── main.mbt             # Wires adapters, exports handle_request
 ├── worker/
-│   └── index.js               # Cloudflare Workers entry point
-├── wrangler.toml              # Cloudflare Workers configuration
-└── .gitignore
+│   └── index.js             # Cloudflare Workers entry point
+├── wrangler.toml
+└── moon.mod.json
 ```
+
+## Always Valid Domain Model
+
+- `TodoTitle` — opaque type with `priv` field; can only be created via `TodoTitle::create()` which validates non-empty/non-blank
+- `Todo` — all fields are `priv`; constructed only via `Todo::create()`, modified via `toggle()`, `with_title()`, `with_completed()`
+- Invalid states are unrepresentable at compile time
 
 ## Prerequisites
 
-- [MoonBit toolchain](https://www.moonbitlang.com/download/) (`moon` and `moonc`)
+- [MoonBit toolchain](https://www.moonbitlang.com/download/)
 - [Node.js](https://nodejs.org/) (v18+)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (`npm install -g wrangler`)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
 
 ## Development
 
 ```bash
-# Build MoonBit to JS
 moon build --target js --release
-
-# Run locally
 wrangler dev
-
-# Deploy to Cloudflare Workers
-wrangler deploy
 ```
 
-## API Endpoints
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | HTML UI |
 | GET | `/todos` | List all todos |
-| POST | `/todos` | Create a todo (`{"title": "..."}`) |
+| POST | `/todos` | Create (`{"title": "..."}`) |
 | PUT | `/todos/:id/toggle` | Toggle completion |
-| PUT | `/todos/:id` | Update a todo |
-| DELETE | `/todos/:id` | Delete a todo |
+| PUT | `/todos/:id` | Update fields |
+| DELETE | `/todos/:id` | Delete |

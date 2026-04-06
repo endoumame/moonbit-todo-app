@@ -1,7 +1,7 @@
 import {
+  "endoumame/moonbit-todo-app/adapter/store" @store,
+  "endoumame/moonbit-todo-app/adapter/http" @http,
   "moonbitlang/core/json",
-  "moonbitlang/core/string",
-  "moonbitlang/core/immut/sorted_map" @sorted_map,
 }
 
 options(
