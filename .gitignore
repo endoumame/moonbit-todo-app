@@ -1,0 +1,6 @@
+_build/
+.moon/
+node_modules/
+.wrangler/
+target/
+*.tar.gz

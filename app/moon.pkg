@@ -1,0 +1,10 @@
+import {
+  "endoumame/moonbit-todo-app/adapter/store" @store,
+  "endoumame/moonbit-todo-app/adapter/http" @http,
+  "moonbitlang/core/json",
+}
+
+options(
+  "is-main": true,
+  link: { "js": { "exports": [ "handle_request" ], "format": "esm" } },
+)

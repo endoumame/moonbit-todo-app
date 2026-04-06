@@ -1,0 +1,8 @@
+{
+  "name": "endoumame/moonbit-todo-app",
+  "version": "0.1.0",
+  "readme": "README.md",
+  "license": "MIT",
+  "keywords": ["todo", "cloudflare-workers"],
+  "description": "A Todo app built with MoonBit, deployed on Cloudflare Workers"
+}
