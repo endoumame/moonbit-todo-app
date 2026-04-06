@@ -1,0 +1,1 @@
+../../.codex/prompts/kiro-spec-status.md

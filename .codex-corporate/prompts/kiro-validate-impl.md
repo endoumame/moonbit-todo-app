@@ -1,0 +1,1 @@
+../../.codex/prompts/kiro-validate-impl.md

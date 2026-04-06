@@ -1,0 +1,1 @@
+../../.codex/prompts/kiro-validate-gap.md

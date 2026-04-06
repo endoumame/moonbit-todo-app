@@ -1,0 +1,1 @@
+../../.codex/prompts/kiro-spec-design.md

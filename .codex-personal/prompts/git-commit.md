@@ -1,0 +1,1 @@
+../../.codex/prompts/git-commit.md
