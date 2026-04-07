@@ -1,4 +1,4 @@
-import { handle_request } from "../_build/js/release/build/app/app.js";
+import { handle_request } from "../../_build/js/release/build/src/app/app.js";
 
 export default {
   async fetch(request) {
